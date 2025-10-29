@@ -7,12 +7,22 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"unicode"
 )
 
 type Todo struct {
 	ID   int
 	Text string
 	Done bool
+}
+
+type PageData struct {
+	Todos      []Todo
+	Keyword    string
+	Page       int
+	TotalPages int
+	Error      string
+	Success    string
 }
 
 var (
@@ -75,16 +85,19 @@ func listTodos(w http.ResponseWriter, r *http.Request) {
 
 	totalPages := (total + todosPerPage - 1) / todosPerPage
 
-	data := struct {
-		Todos      []Todo
-		Keyword    string
-		Page       int
-		TotalPages int
-	}{
+	data := PageData{
 		Todos:      paged,
 		Keyword:    keyword,
 		Page:       page,
 		TotalPages: totalPages,
+	}
+
+	// Check for error/success messages in URL parameters
+	if msg := r.URL.Query().Get("error"); msg != "" {
+		data.Error = msg
+	}
+	if msg := r.URL.Query().Get("success"); msg != "" {
+		data.Success = msg
 	}
 
 	tmpl.Execute(w, data)
@@ -97,15 +110,23 @@ func addTodo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	text := strings.TrimSpace(r.FormValue("todo"))
+
+	// Validasi input kosong
 	if text == "" {
-		http.Redirect(w, r, "/", http.StatusSeeOther)
+		http.Redirect(w, r, "/?error="+encodeURLParam("Input tidak boleh kosong"), http.StatusSeeOther)
+		return
+	}
+
+	// Validasi jika hanya berisi simbol/karakter spesial
+	if isOnlySpecialChars(text) {
+		http.Redirect(w, r, "/?error="+encodeURLParam("Input tidak boleh hanya berisi simbol atau karakter spesial"), http.StatusSeeOther)
 		return
 	}
 
 	mu.Lock()
 	defer mu.Unlock()
 	todos = append(todos, Todo{ID: len(todos) + 1, Text: text})
-	http.Redirect(w, r, "/", http.StatusSeeOther)
+	http.Redirect(w, r, "/?success="+encodeURLParam("Todo berhasil ditambahkan!"), http.StatusSeeOther)
 }
 
 func markDone(w http.ResponseWriter, r *http.Request) {
@@ -120,7 +141,7 @@ func markDone(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 	}
-	http.Redirect(w, r, "/", http.StatusSeeOther)
+	http.Redirect(w, r, "/?success="+encodeURLParam("Todo ditandai sebagai selesai!"), http.StatusSeeOther)
 }
 
 func deleteTodo(w http.ResponseWriter, r *http.Request) {
@@ -135,12 +156,29 @@ func deleteTodo(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 	}
-	http.Redirect(w, r, "/", http.StatusSeeOther)
+	http.Redirect(w, r, "/?success="+encodeURLParam("Todo berhasil dihapus!"), http.StatusSeeOther)
 }
 
 func clearTodos(w http.ResponseWriter, r *http.Request) {
 	mu.Lock()
 	defer mu.Unlock()
 	todos = []Todo{}
-	http.Redirect(w, r, "/", http.StatusSeeOther)
+	http.Redirect(w, r, "/?success="+encodeURLParam("Semua todo berhasil dihapus!"), http.StatusSeeOther)
+}
+
+// Fungsi untuk mengecek apakah string hanya berisi karakter spesial
+func isOnlySpecialChars(s string) bool {
+	hasAlphanumeric := false
+	for _, char := range s {
+		if unicode.IsLetter(char) || unicode.IsDigit(char) || unicode.IsSpace(char) {
+			hasAlphanumeric = true
+			break
+		}
+	}
+	return !hasAlphanumeric
+}
+
+// Fungsi untuk encode parameter URL
+func encodeURLParam(s string) string {
+	return strings.ReplaceAll(s, " ", "+")
 }
