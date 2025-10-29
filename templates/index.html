@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simple Todo List</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex justify-center min-h-screen items-center">
+  <div class="bg-white shadow-lg rounded-2xl p-6 w-full max-w-md">
+    <h1 class="text-2xl font-semibold text-gray-800 text-center mb-5">📝 Simple Todo List</h1>
+
+    <form action="/add" method="POST" class="flex gap-2 mb-4">
+      <input type="text" name="todo" placeholder="Tambahkan todo baru..."
+        class="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+      <button type="submit"
+        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition">Tambah</button>
+    </form>
+
+    <form method="GET" action="/" class="flex gap-2 mb-4">
+      <input type="text" name="q" value="{{.Keyword}}" placeholder="Cari todo..."
+        class="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+      <button type="submit"
+        class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg transition">Cari</button>
+    </form>
+
+    <div class="flex justify-end mb-3">
+      <a href="/clear" class="text-sm text-red-500 hover:text-red-700 transition">🗑️ Hapus Semua</a>
+    </div>
+
+    {{if .Todos}}
+    <ul class="divide-y divide-gray-200 mb-4">
+      {{range .Todos}}
+      <li class="flex justify-between items-center py-2">
+        <span class="{{if .Done}}line-through text-gray-400{{else}}text-gray-800{{end}}">{{.Text}}</span>
+        <div class="space-x-2">
+          {{if not .Done}}
+            <a href="/done?id={{.ID}}" class="text-green-600 hover:text-green-800 text-sm">Selesai</a>
+          {{end}}
+          <a href="/delete?id={{.ID}}" class="text-red-500 hover:text-red-700 text-sm">Hapus</a>
+        </div>
+      </li>
+      {{end}}
+    </ul>
+
+    {{if gt .TotalPages 1}}
+    <div class="flex justify-center items-center gap-3">
+      {{if gt .Page 1}}
+        <a href="/?page={{sub .Page 1}}{{if .Keyword}}&q={{.Keyword}}{{end}}" 
+          class="text-blue-600 hover:underline">← Sebelumnya</a>
+      {{end}}
+      <span class="text-gray-600 text-sm">Halaman {{.Page}} dari {{.TotalPages}}</span>
+      {{if lt .Page .TotalPages}}
+        <a href="/?page={{add .Page 1}}{{if .Keyword}}&q={{.Keyword}}{{end}}" 
+          class="text-blue-600 hover:underline">Berikutnya →</a>
+      {{end}}
+    </div>
+    {{end}}
+    {{else}}
+    <p class="text-center text-gray-400 italic mt-4">Belum ada todo. Yuk tambahkan sesuatu!</p>
+    {{end}}
+  </div>
+</body>
+</html>
